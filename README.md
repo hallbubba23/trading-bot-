@@ -76,6 +76,25 @@ clicking the same slot at the same moment can't both get it. The loser gets a
 Times are stored as a date string plus minutes-past-midnight rather than
 timestamps, so daylight saving can never shift an appointment.
 
+## Your coach profile
+
+A "Meet your coach" section — photos, a bio, a highlight strip, and a
+season-by-season table — lives in [`server/coach.js`](server/coach.js).
+
+**It ships switched off** (`publish: false`) and the site renders nothing for it
+until you turn it on. The draft details in there came from a web search and have
+not been checked against an official source. Read every line, correct it, then
+set `publish: true`. Switching it on with nothing filled in still shows nothing,
+so a half-finished profile can't leak onto the page.
+
+Photos go in `public/images/coach/` and are listed under `photos`. See
+[the notes in that folder](public/images/coach/README.md) for sizes and for why
+you should only use pictures you actually own — a college athletics site's
+photos belong to the school or the photographer, and this site takes payments.
+
+Every field is optional. Leave `seasons` empty and the table disappears; leave
+`photos` empty and the layout closes up around it.
+
 ## Payments
 
 Prices live in `PRICING` in [`server/config.js`](server/config.js) — currently
@@ -168,6 +187,7 @@ server/
   availability.js  turns bookings + hours into what's open
   validate.js      request validation and normalization
   payments.js      Stripe Checkout, webhook signatures, Zelle instructions
+  coach.js         your bio, photos and stats  ← fill in, then publish
   db.js            SQLite storage, holds and payment state
 public/
   index.html       booking page

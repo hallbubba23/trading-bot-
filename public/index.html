@@ -26,6 +26,7 @@
         </a>
         <nav class="site-nav">
           <a href="#book">Book a session</a>
+          <a href="#coach" id="nav-coach" hidden>Your coach</a>
           <a href="#manage">My booking</a>
           <a href="/admin">Coach login</a>
         </nav>
@@ -41,6 +42,40 @@
           slot on the calendar. Confirmation is instant.
         </p>
         <a class="button primary large" href="#book">See open times</a>
+      </div>
+    </section>
+
+    <!-- Meet your coach — stays hidden until server/coach.js is filled in -->
+    <section class="coach" id="coach" hidden>
+      <div class="wrap">
+        <div class="coach-inner">
+          <div class="coach-photos" id="coach-photos"></div>
+          <div class="coach-copy">
+            <p class="eyebrow">Meet your coach</p>
+            <h2 id="coach-name"></h2>
+            <p class="coach-tagline" id="coach-tagline"></p>
+            <p class="coach-bio" id="coach-bio"></p>
+            <ul class="coach-facts" id="coach-facts"></ul>
+            <p class="coach-played" id="coach-played"></p>
+          </div>
+        </div>
+
+        <div class="coach-highlights" id="coach-highlights"></div>
+
+        <div class="coach-seasons" id="coach-seasons" hidden>
+          <h3 class="sub-heading">Career</h3>
+          <div class="table-scroll">
+            <table class="season-table">
+              <thead>
+                <tr>
+                  <th>Year</th><th>Team</th><th>Level</th>
+                  <th>G</th><th>W–L</th><th>SV</th><th>IP</th><th>ERA</th><th>K</th>
+                </tr>
+              </thead>
+              <tbody id="season-rows"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 

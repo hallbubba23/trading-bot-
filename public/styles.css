@@ -156,6 +156,183 @@ h3 {
   margin: 0 0 1.8rem;
 }
 
+/* ---------- Meet your coach ---------- */
+
+.coach {
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  padding: 3rem 0;
+}
+
+.coach-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.coach-photos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+.coach-photos:has(img + img) {
+  grid-template-columns: 1fr 1fr;
+}
+
+.coach-photos img {
+  width: 100%;
+  height: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--cream);
+}
+
+.coach-photos img:first-child:nth-last-child(3) {
+  grid-column: span 2;
+}
+
+.coach-copy h2 {
+  font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+  margin-bottom: 0.2rem;
+}
+
+.coach .eyebrow {
+  color: var(--stitch);
+}
+
+.coach-tagline {
+  color: var(--muted);
+  font-size: 1.02rem;
+  margin: 0 0 1rem;
+}
+
+.coach-bio {
+  font-size: 1.02rem;
+  margin: 0 0 1.2rem;
+  max-width: 60ch;
+}
+
+.coach-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.coach-facts li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.88rem;
+}
+
+.fact-label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coach-played {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.coach-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 2.2rem;
+}
+
+.highlight {
+  display: grid;
+  gap: 0.1rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 12px;
+  background: var(--navy);
+  color: #fff;
+}
+
+.highlight-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.highlight-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #9fb4d0;
+}
+
+.highlight-note {
+  font-size: 0.78rem;
+  color: #7f99ba;
+  margin-top: 0.2rem;
+}
+
+.coach-seasons {
+  margin-top: 2.2rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.season-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 640px;
+}
+
+.season-table th {
+  text-align: left;
+  font-size: 0.71rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  padding: 0 0.7rem 0.45rem 0;
+  white-space: nowrap;
+}
+
+.season-table td {
+  padding: 0.6rem 0.7rem 0.6rem 0;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.season-table td:first-child,
+.season-table td:nth-child(2) {
+  font-weight: 600;
+}
+
+@media (max-width: 800px) {
+  .coach-inner {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .coach {
+    padding: 2.2rem 0;
+  }
+}
+
 /* ---------- Steps ---------- */
 
 .steps {

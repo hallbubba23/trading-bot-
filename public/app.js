@@ -67,6 +67,104 @@ async function api(path, options = {}) {
   return payload;
 }
 
+/* ---------- meet your coach ---------- */
+
+/**
+ * Renders the coach section, or leaves it hidden. The server sends `coach:
+ * null` until server/coach.js is filled in and switched on, so nothing
+ * unverified can reach a paying customer.
+ */
+function renderCoach() {
+  const coach = state.config.coach;
+  if (!coach) return;
+
+  $('#coach').hidden = false;
+  $('#nav-coach').hidden = false;
+
+  $('#coach-name').textContent = coach.name;
+  $('#coach-tagline').textContent = coach.tagline || '';
+  $('#coach-tagline').hidden = !coach.tagline;
+  $('#coach-bio').textContent = coach.bio || '';
+  $('#coach-bio').hidden = !coach.bio;
+
+  const facts = $('#coach-facts');
+  facts.innerHTML = '';
+  for (const fact of coach.facts || []) {
+    const item = document.createElement('li');
+    const label = document.createElement('span');
+    label.className = 'fact-label';
+    label.textContent = fact.label;
+    const value = document.createElement('strong');
+    value.textContent = fact.value;
+    item.append(label, value);
+    facts.appendChild(item);
+  }
+
+  const played = coach.playedAt || [];
+  $('#coach-played').textContent = played.length ? `Played at ${played.join(' · ')}` : '';
+  $('#coach-played').hidden = played.length === 0;
+
+  const photos = $('#coach-photos');
+  photos.innerHTML = '';
+  for (const photo of coach.photos || []) {
+    const image = document.createElement('img');
+    image.src = photo.src;
+    image.alt = photo.alt || '';
+    image.loading = 'lazy';
+    photos.appendChild(image);
+  }
+  photos.hidden = (coach.photos || []).length === 0;
+
+  const highlights = $('#coach-highlights');
+  highlights.innerHTML = '';
+  for (const item of coach.highlights || []) {
+    const card = document.createElement('div');
+    card.className = 'highlight';
+    const value = document.createElement('span');
+    value.className = 'highlight-value';
+    value.textContent = item.value;
+    const label = document.createElement('span');
+    label.className = 'highlight-label';
+    label.textContent = item.label;
+    card.append(value, label);
+    if (item.note) {
+      const note = document.createElement('span');
+      note.className = 'highlight-note';
+      note.textContent = item.note;
+      card.appendChild(note);
+    }
+    highlights.appendChild(card);
+  }
+  highlights.hidden = (coach.highlights || []).length === 0;
+
+  const seasons = coach.seasons || [];
+  $('#coach-seasons').hidden = seasons.length === 0;
+  const rows = $('#season-rows');
+  rows.innerHTML = '';
+  for (const season of seasons) {
+    const row = document.createElement('tr');
+    const record =
+      season.wins != null && season.losses != null ? `${season.wins}–${season.losses}` : '—';
+    const cells = [
+      season.year,
+      season.team,
+      season.level,
+      season.games,
+      record,
+      season.saves,
+      season.innings,
+      season.era,
+      season.strikeouts,
+    ];
+    for (const cell of cells) {
+      const td = document.createElement('td');
+      td.textContent = cell === null || cell === undefined || cell === '' ? '—' : String(cell);
+      row.appendChild(td);
+    }
+    rows.appendChild(row);
+  }
+}
+
 /* ---------- step 1: session type and length ---------- */
 
 function renderTrainingTypes() {
@@ -555,6 +653,7 @@ async function init() {
   state.durationMinutes = state.config.durations[0].minutes;
   state.month = monthOf(state.config.firstDate);
 
+  renderCoach();
   renderTrainingTypes();
   renderDurations();
   renderPaymentMethods();

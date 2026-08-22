@@ -12,6 +12,7 @@ const { BookingStore } = require('./db');
 const { validateBooking } = require('./validate');
 const { dayAvailability, monthOverview } = require('./availability');
 const payments = require('./payments');
+const { publicCoach } = require('./coach');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -215,6 +216,8 @@ async function handleApi(store, req, res, url) {
       paymentOptions: paymentOptions(),
       paymentsEnabled: config.paymentsEnabled(),
       zelleHoldHours: Math.round(config.PAYMENTS.holdMinutes.zelle / 60),
+      // null until the coach section is filled in and switched on.
+      coach: publicCoach(),
     });
   }
 
