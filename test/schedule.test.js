@@ -31,23 +31,41 @@ test('dayOfWeek is stable regardless of local timezone', () => {
   assert.equal(schedule.dayOfWeek('2026-08-23'), 0); // a Sunday
 });
 
-test('Sunday is closed and weekdays are open', () => {
-  assert.equal(schedule.isOpenOn('2026-08-23'), false);
-  assert.equal(schedule.isOpenOn('2026-08-24'), true);
+test('the facility is open all seven days', () => {
+  for (let day = 0; day < 7; day += 1) {
+    const date = schedule.addDays('2026-08-23', day); // 2026-08-23 is a Sunday
+    assert.equal(schedule.isOpenOn(date), true, `${date} should be open`);
+  }
 });
 
-test('candidate starts fit the session inside opening hours', () => {
-  // Monday: 15:00–20:00.
+test('weekday starts run from 4:30 PM to closing', () => {
+  // Monday: 16:30–21:00.
   const halfHour = schedule.candidateStarts('2026-08-24', 30);
-  assert.equal(halfHour[0], 15 * 60);
-  assert.equal(halfHour.at(-1), 19 * 60 + 30);
+  assert.equal(halfHour[0], 16 * 60 + 30, 'first start is 4:30 PM');
+  assert.equal(halfHour.at(-1), 20 * 60 + 30, 'last half hour starts at 8:30 PM');
 
   const fullHour = schedule.candidateStarts('2026-08-24', 60);
-  assert.equal(fullHour.at(-1), 19 * 60, 'an hour cannot start at 19:30 when we close at 20:00');
+  assert.equal(fullHour.at(-1), 20 * 60, 'an hour cannot start at 8:30 when we close at 9:00');
 });
 
-test('a closed day offers no starts', () => {
-  assert.deepEqual(schedule.candidateStarts('2026-08-23', 30), []);
+test('weekend starts run from 8:00 AM to closing', () => {
+  // Saturday: 08:00–21:00.
+  const starts = schedule.candidateStarts('2026-08-22', 30);
+  assert.equal(starts[0], 8 * 60);
+  assert.equal(starts.at(-1), 20 * 60 + 30);
+  assert.equal(starts.length, 26, 'thirteen hours of half-hour slots');
+});
+
+test('a one-off closure removes every slot that day', () => {
+  const config = require('../server/config');
+  const date = '2026-12-25';
+  config.CLOSED_DATES.push(date);
+  try {
+    assert.equal(schedule.isOpenOn(date), false);
+    assert.deepEqual(schedule.candidateStarts(date, 30), []);
+  } finally {
+    config.CLOSED_DATES.pop();
+  }
 });
 
 test('overlap is half-open, so back-to-back sessions are fine', () => {

@@ -9,12 +9,13 @@ const SLOT_MINUTES = 30;
 
 // 0 = Sunday ... 6 = Saturday. A day with no entry is closed.
 const HOURS = {
-  1: [{ open: '15:00', close: '20:00' }], // Monday
-  2: [{ open: '15:00', close: '20:00' }], // Tuesday
-  3: [{ open: '15:00', close: '20:00' }], // Wednesday
-  4: [{ open: '15:00', close: '20:00' }], // Thursday
-  5: [{ open: '15:00', close: '19:00' }], // Friday
-  6: [{ open: '09:00', close: '15:00' }], // Saturday
+  0: [{ open: '08:00', close: '21:00' }], // Sunday
+  1: [{ open: '16:30', close: '21:00' }], // Monday
+  2: [{ open: '16:30', close: '21:00' }], // Tuesday
+  3: [{ open: '16:30', close: '21:00' }], // Wednesday
+  4: [{ open: '16:30', close: '21:00' }], // Thursday
+  5: [{ open: '16:30', close: '21:00' }], // Friday
+  6: [{ open: '08:00', close: '21:00' }], // Saturday
 };
 
 const TRAINING_TYPES = [

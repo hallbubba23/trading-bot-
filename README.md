@@ -57,7 +57,10 @@ Restart the server after editing.
 
 Slots are generated from opening hours on a 30-minute grid. A session is offered
 only where it fits entirely inside an open window — so a 1-hour session can't
-start at 7:30 PM on a day that closes at 8:00 PM, though a 30-minute one can.
+start at 8:30 PM on a day that closes at 9:00 PM, though a 30-minute one can.
+
+Current hours are Monday–Friday 4:30 PM–9:00 PM and Saturday–Sunday
+8:00 AM–9:00 PM.
 
 Double-booking is prevented in the database, not just the browser: the conflict
 check and the insert share one `BEGIN IMMEDIATE` transaction, so two people
