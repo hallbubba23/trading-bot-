@@ -113,7 +113,10 @@ function renderCoach() {
     image.loading = 'lazy';
     photos.appendChild(image);
   }
-  photos.hidden = (coach.photos || []).length === 0;
+  // With no photos the copy takes the full width instead of leaving a gap.
+  const hasPhotos = (coach.photos || []).length > 0;
+  photos.hidden = !hasPhotos;
+  document.querySelector('.coach-inner').classList.toggle('no-photos', !hasPhotos);
 
   const highlights = $('#coach-highlights');
   highlights.innerHTML = '';

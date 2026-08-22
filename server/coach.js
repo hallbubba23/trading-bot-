@@ -3,12 +3,18 @@
 /**
  * The "Meet your coach" section.
  *
- * ─── READ THIS FIRST ────────────────────────────────────────────────────────
- * `publish` is false, so this whole section is hidden on the site right now.
- * That is deliberate. The draft values below came from a web search and have
- * NOT been checked against an official source, and parents are being asked to
- * pay money on the strength of them. Go through every line, fix what's wrong,
- * add your photos, and only then set `publish: true`.
+ * ─── WHAT'S CONFIRMED AND WHAT ISN'T ────────────────────────────────────────
+ * Confirmed by Bubba: the career path — Mississippi Gulf Coast, Southern
+ * Illinois, Dallas Baptist, then the Washington Nationals organization. That
+ * is what `playedAt`, `tagline` and `bio` are built from, and it is live.
+ *
+ * NOT confirmed: the physical details in `facts` came from a web search, not
+ * from him. Check height, hometown and bats/throws and correct them.
+ *
+ * Deliberately empty: `highlights` and `seasons`. Every stats site was
+ * unreachable, so no numbers here would be better than a plausible guess on a
+ * page that takes payments. Fill them in from your own records — see the
+ * drafts at the bottom of this file for the shape.
  *
  * PHOTOS: use pictures you own — ones you or your family took, or that you have
  * permission to use. Do not copy images off a college athletics site, MaxPreps,
@@ -19,18 +25,21 @@
  */
 
 const COACH = {
-  // Flip to true once every value below is verified and your photos are in.
-  publish: false,
+  publish: true,
 
   name: 'Bubba Hall',
   // Shown under the name. Keep it to one line.
-  tagline: 'Right-handed pitcher',
+  tagline: 'Right-handed pitcher · Washington Nationals organization',
 
-  // Two or three sentences, in your own voice. This sells the lessons more
-  // than the stats do — say who you coach well and what a session is like.
-  bio: '',
+  // Rewrite this in your own voice — it sells lessons harder than stats do.
+  bio:
+    'I pitched at Mississippi Gulf Coast Community College and Southern Illinois ' +
+    'before finishing at Dallas Baptist, then signed with the Washington Nationals ' +
+    'in 2022 and pitched in their system through 2025. I coach the things I spent ' +
+    'those years working on: repeatable mechanics, command you can trust under ' +
+    'pressure, and the part between the ears that nobody drills.',
 
-  // Small facts shown as a row of chips. Delete any you'd rather not post.
+  // Small facts shown as a row of chips. VERIFY THESE — they came from a search.
   facts: [
     { label: 'Position', value: 'RHP' },
     { label: 'Bats / Throws', value: 'R / R' },
@@ -40,32 +49,31 @@ const COACH = {
 
   // Where you played. Most recent first.
   playedAt: [
+    'Washington Nationals organization',
     'Dallas Baptist University',
     'Southern Illinois University',
     'Mississippi Gulf Coast Community College',
   ],
 
   /**
-   * The big numbers strip. Pick three or four that actually sell you as a
-   * pitching coach — strikeouts, appearances, ERA — not a full stat dump.
+   * The big numbers strip — three or four that sell you as a coach, not a full
+   * stat dump. Empty until you supply real figures. Shape:
+   *
+   *   { value: '39', label: 'Strikeouts', note: '2021 season' },
+   *   { value: '2.85', label: 'ERA', note: 'Career, college' },
    */
-  highlights: [
-    // { value: '39', label: 'Strikeouts', note: '2021 season' },
-  ],
+  highlights: [],
 
   /**
-   * Season-by-season table. Leave empty and the table is skipped entirely.
-   * Only the fields you fill in are shown.
+   * Season-by-season table. Empty means the table is skipped entirely. Only
+   * the fields you fill in are shown; the rest render as dashes. Shape:
+   *
+   *   { year: '2021', team: 'Southern Illinois', level: 'NCAA D1',
+   *     games: 21, wins: 1, losses: 2, saves: 2, innings: 30.1,
+   *     era: 3.86, strikeouts: 39 },
+   *   { year: '2023', team: 'Fredericksburg Nationals', level: 'Single-A', ... },
    */
-  seasons: [
-    // {
-    //   year: '2021',
-    //   team: 'Southern Illinois',
-    //   level: 'NCAA D1',
-    //   games: 21, wins: 1, losses: 2, saves: 2, strikeouts: 39,
-    //   innings: null, era: null,
-    // },
-  ],
+  seasons: [],
 
   /**
    * Photos of you. Files go in `public/images/coach/`, and every one needs

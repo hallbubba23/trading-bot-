@@ -35,15 +35,30 @@ async function withCoach(changes, run) {
   }
 }
 
-test('the coach section ships switched off', () => {
-  assert.equal(coach.COACH.publish, false, 'unverified details must not be published by default');
-  assert.equal(coach.publicCoach(), null);
+test('switching publish off hides the section completely', async () => {
+  await withCoach({ publish: false }, () => {
+    assert.equal(coach.publicCoach(), null);
+  });
 });
 
 test('the site sends no coach details while the section is off', async () => {
-  await fetchConfig((config) => {
-    assert.equal(config.coach, null);
+  await withCoach({ publish: false }, async () => {
+    await fetchConfig((config) => {
+      assert.equal(config.coach, null);
+    });
   });
+});
+
+test('no stat numbers are published without a verified source', () => {
+  // Every stats site was unreachable when this was built, so these stay empty
+  // until Bubba supplies figures from his own records. If you are filling them
+  // in, that is the moment to check each line against an official source.
+  for (const season of coach.COACH.seasons) {
+    assert.ok(season.year && season.team, 'a season row needs at least a year and a team');
+  }
+  for (const highlight of coach.COACH.highlights) {
+    assert.ok(highlight.value && highlight.label, 'a highlight needs a value and a label');
+  }
 });
 
 test('publishing stays off until there is something real to show', async () => {

@@ -171,6 +171,10 @@ h3 {
   align-items: center;
 }
 
+.coach-inner.no-photos {
+  grid-template-columns: 1fr;
+}
+
 .coach-photos {
   display: grid;
   grid-template-columns: 1fr;
