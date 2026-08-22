@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Coach Dashboard — Diamond Time</title>
+    <meta name="robots" content="noindex" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⚾</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/">
+          <span class="brand-ball" aria-hidden="true">⚾</span>
+          <span>
+            <strong>Diamond Time</strong>
+            <small>Coach Dashboard</small>
+          </span>
+        </a>
+        <nav class="site-nav">
+          <a href="/">Booking page</a>
+          <a href="#" id="sign-out">Sign out</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap admin-main">
+      <!-- Sign in -->
+      <section class="card sign-in" id="sign-in" aria-labelledby="signin-title">
+        <h2 id="signin-title">Coach sign in</h2>
+        <p class="hint">Enter the admin token to see the schedule.</p>
+        <form id="token-form" novalidate>
+          <div class="field">
+            <label for="token">Admin token</label>
+            <input id="token" type="password" autocomplete="current-password" />
+            <p class="error" id="token-error" role="alert"></p>
+          </div>
+          <button class="button primary" type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <!-- Schedule -->
+      <section id="dashboard" hidden>
+        <div class="admin-toolbar card">
+          <div class="field">
+            <label for="from">From</label>
+            <input id="from" type="date" />
+          </div>
+          <div class="field">
+            <label for="to">To</label>
+            <input id="to" type="date" />
+          </div>
+          <div class="field">
+            <label for="filter-type">Training</label>
+            <select id="filter-type">
+              <option value="">All</option>
+              <option value="hitting">Hitting</option>
+              <option value="pitching">Pitching</option>
+              <option value="fielding">Fielding</option>
+            </select>
+          </div>
+          <button class="button" type="button" id="refresh">Refresh</button>
+        </div>
+
+        <div class="stat-row" id="stats"></div>
+        <div id="schedule"></div>
+      </section>
+    </main>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>

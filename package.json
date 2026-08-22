@@ -1,0 +1,15 @@
+{
+  "name": "diamond-time-booking",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baseball training session booking site with a calendar",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test \"test/*.test.js\""
+  }
+}

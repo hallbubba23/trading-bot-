@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diamond Time — Book a Baseball Training Session</title>
+    <meta
+      name="description"
+      content="Book 30 minute or 1 hour hitting, pitching, and fielding sessions with our coaching staff."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⚾</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/">
+          <span class="brand-ball" aria-hidden="true">⚾</span>
+          <span>
+            <strong>Diamond Time</strong>
+            <small>Baseball Training</small>
+          </span>
+        </a>
+        <nav class="site-nav">
+          <a href="#book">Book a session</a>
+          <a href="#manage">My booking</a>
+          <a href="/admin">Coach login</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="wrap hero-inner">
+        <p class="eyebrow">One player, one coach, one hour of real work</p>
+        <h1>Book your next session on the diamond.</h1>
+        <p class="hero-sub">
+          Pick hitting, pitching, or fielding — then grab a 30 minute or full hour
+          slot on the calendar. Confirmation is instant.
+        </p>
+        <a class="button primary large" href="#book">See open times</a>
+      </div>
+    </section>
+
+    <main class="wrap" id="book">
+      <ol class="steps" aria-label="Booking steps">
+        <li class="step" data-step="1"><span>1</span> Session</li>
+        <li class="step" data-step="2"><span>2</span> Date &amp; time</li>
+        <li class="step" data-step="3"><span>3</span> Your details</li>
+      </ol>
+
+      <div class="layout">
+        <div class="column-main">
+          <!-- Step 1 --------------------------------------------------------->
+          <section class="card" aria-labelledby="step1-title">
+            <h2 id="step1-title"><span class="step-dot">1</span> What are we working on?</h2>
+            <div class="training-grid" id="training-types" role="radiogroup" aria-label="Training type"></div>
+
+            <h3 class="sub-heading">How long?</h3>
+            <div class="duration-row" id="durations" role="radiogroup" aria-label="Session length"></div>
+          </section>
+
+          <!-- Step 2 --------------------------------------------------------->
+          <section class="card" aria-labelledby="step2-title">
+            <h2 id="step2-title"><span class="step-dot">2</span> Pick a date and time</h2>
+
+            <div class="calendar-head">
+              <button class="icon-button" id="prev-month" type="button" aria-label="Previous month">‹</button>
+              <h3 id="month-label" aria-live="polite">…</h3>
+              <button class="icon-button" id="next-month" type="button" aria-label="Next month">›</button>
+            </div>
+
+            <div class="weekday-row" aria-hidden="true">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+              <span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="calendar-grid" id="calendar" role="grid" aria-label="Available dates"></div>
+
+            <ul class="legend">
+              <li><i class="swatch open"></i> Openings</li>
+              <li><i class="swatch full"></i> Fully booked</li>
+              <li><i class="swatch closed"></i> Closed</li>
+            </ul>
+
+            <div class="slots" id="slots-panel">
+              <h3 class="sub-heading" id="slots-title">Choose a day to see open times</h3>
+              <div class="slot-grid" id="slot-grid" role="group" aria-labelledby="slots-title"></div>
+            </div>
+          </section>
+
+          <!-- Step 3 --------------------------------------------------------->
+          <section class="card" aria-labelledby="step3-title">
+            <h2 id="step3-title"><span class="step-dot">3</span> Who's coming?</h2>
+            <form id="booking-form" novalidate>
+              <div class="field-row">
+                <div class="field">
+                  <label for="name">Player name</label>
+                  <input id="name" name="name" type="text" autocomplete="name" required />
+                  <p class="error" data-error-for="name"></p>
+                </div>
+                <div class="field">
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" autocomplete="email" required />
+                  <p class="error" data-error-for="email"></p>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="phone">Phone number</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autocomplete="tel"
+                    placeholder="(555) 010-1234"
+                    required
+                  />
+                  <p class="error" data-error-for="phone"></p>
+                </div>
+                <div class="field">
+                  <label for="notes">Anything we should know? <span class="optional">optional</span></label>
+                  <input id="notes" name="notes" type="text" placeholder="Age, level, what you want to focus on" />
+                  <p class="error" data-error-for="notes"></p>
+                </div>
+              </div>
+
+              <p class="error form-error" id="form-error" role="alert"></p>
+
+              <button class="button primary large" id="submit-button" type="submit" disabled>
+                Confirm booking
+              </button>
+            </form>
+          </section>
+        </div>
+
+        <!-- Summary rail ---------------------------------------------------->
+        <aside class="column-side">
+          <div class="card summary" id="summary">
+            <h2>Your session</h2>
+            <dl>
+              <div><dt>Training</dt><dd id="sum-training">—</dd></div>
+              <div><dt>Length</dt><dd id="sum-duration">—</dd></div>
+              <div><dt>Date</dt><dd id="sum-date">—</dd></div>
+              <div><dt>Time</dt><dd id="sum-time">—</dd></div>
+            </dl>
+            <p class="hint" id="summary-hint">Pick a session type to get started.</p>
+          </div>
+
+          <div class="card hours">
+            <h2>Facility hours</h2>
+            <ul id="hours-list"></ul>
+            <p class="hint" id="lead-hint"></p>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Manage an existing booking ---------------------------------------->
+      <section class="card manage" id="manage" aria-labelledby="manage-title">
+        <h2 id="manage-title">Look up or cancel a booking</h2>
+        <p class="hint">
+          Enter the confirmation code from your booking along with the email you used.
+        </p>
+        <form id="lookup-form" novalidate>
+          <div class="field-row">
+            <div class="field">
+              <label for="lookup-code">Confirmation code</label>
+              <input id="lookup-code" type="text" placeholder="e.g. K7M2QP" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="lookup-email">Email</label>
+              <input id="lookup-email" type="email" autocomplete="email" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="button" type="submit">Find my booking</button>
+            <button class="button danger" type="button" id="cancel-button" hidden>
+              Cancel this booking
+            </button>
+          </div>
+          <p class="error" id="lookup-error" role="alert"></p>
+        </form>
+        <div class="lookup-result" id="lookup-result" hidden></div>
+      </section>
+    </main>
+
+    <!-- Confirmation ------------------------------------------------------->
+    <div class="modal-backdrop" id="confirm-modal" hidden>
+      <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="confirm-badge" aria-hidden="true">⚾</div>
+        <h2 id="confirm-title">You're on the schedule!</h2>
+        <p class="confirm-copy" id="confirm-copy"></p>
+        <p class="confirm-code">
+          Confirmation code<strong id="confirm-code"></strong>
+        </p>
+        <p class="hint">
+          Save this code — you'll need it (plus your email) to look up or cancel the session.
+        </p>
+        <button class="button primary" type="button" id="confirm-close">Done</button>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>Diamond Time Baseball Training · Sessions are one-on-one with a coach.</p>
+        <p class="muted">Questions? Call the facility at (555) 010-0199.</p>
+      </div>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
