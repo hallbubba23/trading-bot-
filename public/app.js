@@ -9,6 +9,7 @@ const state = {
   month: null, // 'YYYY-MM'
   date: null, // 'YYYY-MM-DD'
   startTime: null, // '15:30'
+  paymentMethod: null, // 'card' | 'zelle' | null when payments are off
   slots: [],
   submitting: false,
 };
@@ -89,6 +90,11 @@ function renderTrainingTypes() {
   }
 }
 
+function priceFor(minutes) {
+  const price = (state.config.prices || []).find((p) => p.minutes === minutes);
+  return price ? price.amountLabel : null;
+}
+
 function renderDurations() {
   const container = $('#durations');
   container.innerHTML = '';
@@ -98,8 +104,10 @@ function renderDurations() {
     button.className = 'choice';
     button.setAttribute('role', 'radio');
     button.setAttribute('aria-checked', String(state.durationMinutes === duration.minutes));
-    button.innerHTML = `<strong></strong>`;
+    button.innerHTML = `<strong></strong><span class="price"></span>`;
     button.querySelector('strong').textContent = duration.label;
+    const price = state.config.paymentsEnabled ? priceFor(duration.minutes) : null;
+    if (price) button.querySelector('.price').textContent = price;
     button.addEventListener('click', async () => {
       if (state.durationMinutes === duration.minutes) return;
       state.durationMinutes = duration.minutes;
@@ -108,6 +116,36 @@ function renderDurations() {
       renderDurations();
       await renderCalendar();
       if (state.date) await selectDate(state.date);
+      updateSummary();
+    });
+    container.appendChild(button);
+  }
+}
+
+function renderPaymentMethods() {
+  const options = state.config.paymentOptions || [];
+  const section = $('#payment-section');
+  if (options.length === 0) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  if (options.length === 1) state.paymentMethod = options[0].id;
+
+  const container = $('#payment-methods');
+  container.innerHTML = '';
+  for (const option of options) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'choice';
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(state.paymentMethod === option.id));
+    button.innerHTML = `<strong></strong><span></span>`;
+    button.querySelector('strong').textContent = option.label;
+    button.querySelector('span').textContent = option.blurb;
+    button.addEventListener('click', () => {
+      state.paymentMethod = option.id;
+      renderPaymentMethods();
       updateSummary();
     });
     container.appendChild(button);
@@ -231,6 +269,12 @@ function renderSlots() {
 
 /* ---------- summary rail and step markers ---------- */
 
+function submitLabel(price) {
+  if (state.paymentMethod === 'card') return price ? `Pay ${price} and book` : 'Continue to payment';
+  if (state.paymentMethod === 'zelle') return 'Hold my slot';
+  return 'Confirm booking';
+}
+
 function updateSummary() {
   const type = state.config.trainingTypes.find((t) => t.id === state.trainingType);
   const duration = state.config.durations.find((d) => d.minutes === state.durationMinutes);
@@ -241,13 +285,24 @@ function updateSummary() {
   $('#sum-date').textContent = state.date ? formatLongDate(state.date) : '—';
   $('#sum-time').textContent = slot ? `${slot.label} – ${slot.endLabel}` : '—';
 
-  const ready = Boolean(state.trainingType && state.durationMinutes && state.date && state.startTime);
+  const price = state.config.paymentsEnabled ? priceFor(state.durationMinutes) : null;
+  $('#sum-total-row').hidden = !price;
+  $('#sum-total').textContent = price || '—';
+
+  const needsPayment = (state.config.paymentOptions || []).length > 0;
+  const picked = Boolean(state.trainingType && state.durationMinutes && state.date && state.startTime);
+  const ready = picked && (!needsPayment || Boolean(state.paymentMethod));
+
   $('#submit-button').disabled = !ready || state.submitting;
+  if (!state.submitting) $('#submit-button').textContent = submitLabel(price);
+
   $('#summary-hint').textContent = ready
     ? 'Fill in your details and confirm.'
     : !state.trainingType || !state.durationMinutes
       ? 'Pick a session type and length to get started.'
-      : 'Choose a date and time on the calendar.';
+      : !state.startTime
+        ? 'Choose a date and time on the calendar.'
+        : 'Choose how you want to pay.';
 
   const stepOne = Boolean(state.trainingType && state.durationMinutes);
   document.querySelector('.step[data-step="1"]').classList.toggle('done', stepOne);
@@ -307,7 +362,8 @@ async function submitBooking(event) {
 
   state.submitting = true;
   $('#submit-button').disabled = true;
-  $('#submit-button').textContent = 'Booking…';
+  $('#submit-button').textContent =
+    state.paymentMethod === 'card' ? 'Opening payment…' : 'Booking…';
 
   const payload = {
     name: $('#name').value,
@@ -318,14 +374,22 @@ async function submitBooking(event) {
     startTime: state.startTime,
     durationMinutes: state.durationMinutes,
     trainingType: state.trainingType,
+    paymentMethod: state.paymentMethod,
   };
 
   try {
-    const { booking } = await api('/api/bookings', {
+    const result = await api('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    showConfirmation(booking);
+
+    // Card payments finish on Stripe's own page.
+    if (result.checkoutUrl) {
+      window.location.assign(result.checkoutUrl);
+      return;
+    }
+
+    showConfirmation(result.booking, result.zelle);
     $('#booking-form').reset();
     state.startTime = null;
     await renderCalendar();
@@ -341,20 +405,89 @@ async function submitBooking(event) {
     }
   } finally {
     state.submitting = false;
-    $('#submit-button').textContent = 'Confirm booking';
     updateSummary();
   }
 }
 
-function showConfirmation(booking) {
+function formatHoldDeadline(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-US', {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function showConfirmation(booking, zelle) {
+  const paid = booking.paymentStatus === 'paid';
+  const awaitingZelle = booking.status === 'pending' && booking.paymentMethod === 'zelle';
+
+  $('#confirm-title').textContent = awaitingZelle
+    ? 'Your slot is held'
+    : "You're on the schedule!";
+
   $('#confirm-copy').textContent =
     `${booking.trainingLabel} · ${booking.durationMinutes} minutes · ` +
-    `${formatLongDate(booking.date)} at ${booking.startLabel}. ` +
-    `Booked under ${booking.email}.`;
+    `${formatLongDate(booking.date)} at ${booking.startLabel}` +
+    (paid ? ` · ${booking.amountLabel} paid.` : '.');
+
   $('#confirm-code').textContent = booking.confirmationCode;
+
+  const box = $('#zelle-box');
+  box.hidden = !zelle;
+  if (zelle) {
+    $('#zelle-amount').textContent = zelle.amountLabel;
+    $('#zelle-handle').textContent = zelle.handle;
+    const steps = $('#zelle-steps');
+    steps.innerHTML = '';
+    for (const step of zelle.steps) {
+      const item = document.createElement('li');
+      item.textContent = step;
+      steps.appendChild(item);
+    }
+    $('#zelle-hold').textContent =
+      `We'll hold this time until ${formatHoldDeadline(zelle.holdExpiresAt)}. ` +
+      `If the payment hasn't arrived by then, the slot reopens.`;
+  }
+
+  $('#confirm-hint').textContent = awaitingZelle
+    ? 'Put the code in the Zelle memo so we can match your payment to this booking.'
+    : "Save this code — you'll need it (plus your email) to look up or cancel the session.";
+
   const modal = $('#confirm-modal');
   modal.hidden = false;
   $('#confirm-close').focus();
+}
+
+/**
+ * Stripe sends people back here after checkout. We ask our own server what
+ * actually happened rather than trusting the URL.
+ */
+async function handleCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const completed = params.get('checkout');
+  const cancelled = params.get('checkout_cancelled');
+  if (!completed && !cancelled) return;
+
+  // Drop the query string so a refresh doesn't replay this.
+  window.history.replaceState({}, '', window.location.pathname + '#book');
+
+  if (cancelled) {
+    await api('/api/checkout/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ session: cancelled }),
+    }).catch(() => {});
+    $('#form-error').textContent =
+      'Payment was cancelled, so we released that slot. Pick a time to try again.';
+    return;
+  }
+
+  try {
+    const { booking } = await api(`/api/checkout?session=${encodeURIComponent(completed)}`);
+    showConfirmation(booking);
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+  }
 }
 
 /* ---------- lookup and cancel ---------- */
@@ -375,9 +508,15 @@ async function lookupBooking(event) {
     result.hidden = false;
     result.innerHTML = '<strong></strong><span></span>';
     result.querySelector('strong').textContent = `${booking.trainingLabel} session — ${booking.name}`;
+    const payment =
+      booking.paymentStatus === 'paid'
+        ? ` · ${booking.amountLabel} paid`
+        : booking.status === 'pending'
+          ? ` · ${booking.amountLabel} due — awaiting payment`
+          : '';
     result.querySelector('span').textContent =
       `${formatLongDate(booking.date)} · ${booking.startLabel} – ${booking.endLabel} ` +
-      `(${booking.durationMinutes} min) · ${booking.phone}`;
+      `(${booking.durationMinutes} min) · ${booking.phone}${payment}`;
     $('#cancel-button').hidden = false;
   } catch (error) {
     lookedUp = null;
@@ -418,9 +557,11 @@ async function init() {
 
   renderTrainingTypes();
   renderDurations();
+  renderPaymentMethods();
   renderHours();
   await renderCalendar();
   updateSummary();
+  await handleCheckoutReturn();
 
   $('#prev-month').addEventListener('click', async () => {
     state.month = shiftMonth(state.month, -1);

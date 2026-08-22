@@ -11,12 +11,13 @@ const schedule = require('./schedule');
 const { BookingStore } = require('./db');
 const { validateBooking } = require('./validate');
 const { dayAvailability, monthOverview } = require('./availability');
+const payments = require('./payments');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'coach';
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const MAX_BODY_BYTES = 16 * 1024;
+const MAX_BODY_BYTES = 64 * 1024;
 
 const DAY_NAMES = [
   'Sunday',
@@ -54,7 +55,8 @@ function sendText(res, status, message) {
   res.end(message);
 }
 
-function readJsonBody(req) {
+/** Collects the request body as a string, capped so a huge POST can't sink us. */
+function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -67,17 +69,19 @@ function readJsonBody(req) {
       }
       chunks.push(chunk);
     });
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString('utf8').trim();
-      if (!raw) return resolve({});
-      try {
-        resolve(JSON.parse(raw));
-      } catch {
-        reject(Object.assign(new Error('invalid JSON'), { status: 400 }));
-      }
-    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
+}
+
+async function readJsonBody(req) {
+  const raw = (await readRawBody(req)).trim();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw Object.assign(new Error('invalid JSON'), { status: 400 });
+  }
 }
 
 /** Constant-time compare so the admin token can't be probed a byte at a time. */
@@ -108,6 +112,37 @@ function hoursSummary() {
   });
 }
 
+/** Prices the booking page shows next to each session length. */
+function priceList() {
+  return config.DURATIONS.map((duration) => {
+    const amount = config.priceFor(duration.minutes, null);
+    return {
+      minutes: duration.minutes,
+      amountCents: amount,
+      amountLabel: payments.formatMoney(amount),
+    };
+  });
+}
+
+function paymentOptions() {
+  const options = [];
+  if (config.cardEnabled()) {
+    options.push({
+      id: 'card',
+      label: 'Card',
+      blurb: 'Visa, Mastercard, Apple Pay, or Google Pay. Confirms instantly.',
+    });
+  }
+  if (config.zelleEnabled()) {
+    options.push({
+      id: 'zelle',
+      label: 'Zelle',
+      blurb: `Send from your banking app to ${config.PAYMENTS.zelle.handle}. We confirm once it lands.`,
+    });
+  }
+  return options;
+}
+
 function publicBooking(booking) {
   const type = config.TRAINING_TYPES.find((t) => t.id === booking.trainingType);
   return {
@@ -123,11 +158,22 @@ function publicBooking(booking) {
     trainingType: booking.trainingType,
     trainingLabel: type ? type.label : booking.trainingType,
     notes: booking.notes,
+    status: booking.status,
+    paymentMethod: booking.paymentMethod,
+    paymentStatus: booking.paymentStatus,
+    amountCents: booking.amountCents,
+    amountLabel: payments.formatMoney(booking.amountCents),
+    holdExpiresAt: booking.holdExpiresAt,
   };
 }
 
 function adminBooking(booking) {
-  return { ...publicBooking(booking), id: booking.id, createdAt: booking.createdAt };
+  return {
+    ...publicBooking(booking),
+    id: booking.id,
+    createdAt: booking.createdAt,
+    paidAt: booking.paidAt,
+  };
 }
 
 function createApp(store) {
@@ -165,6 +211,10 @@ async function handleApi(store, req, res, url) {
       firstDate: window.first,
       lastDate: window.last,
       minLeadMinutes: config.MIN_LEAD_MINUTES,
+      prices: priceList(),
+      paymentOptions: paymentOptions(),
+      paymentsEnabled: config.paymentsEnabled(),
+      zelleHoldHours: Math.round(config.PAYMENTS.holdMinutes.zelle / 60),
     });
   }
 
@@ -192,21 +242,42 @@ async function handleApi(store, req, res, url) {
   }
 
   if (req.method === 'POST' && pathname === '/api/bookings') {
+    return createBooking(store, req, res, now);
+  }
+
+  // Stripe sends people back here with the session id in the URL. We ask
+  // Stripe directly rather than trusting the redirect, so a booking confirms
+  // even when the webhook is slow or not configured yet.
+  if (req.method === 'GET' && pathname === '/api/checkout') {
+    const sessionId = url.searchParams.get('session') || '';
+    let booking = store.findBySessionId(sessionId);
+    if (!booking) return sendJson(res, 404, { error: 'We could not find that checkout.' });
+
+    if (booking.paymentStatus !== 'paid') {
+      try {
+        const session = await payments.retrieveSession(sessionId);
+        if (session.payment_status === 'paid') booking = store.markPaid(booking.id, now);
+      } catch (error) {
+        console.error('could not check the Stripe session:', error.message);
+      }
+    }
+    return sendJson(res, 200, { booking: publicBooking(booking) });
+  }
+
+  // The player backed out of Stripe Checkout — free the slot straight away
+  // instead of making everyone wait for the hold to lapse.
+  if (req.method === 'POST' && pathname === '/api/checkout/cancel') {
     const body = await readJsonBody(req);
-    const checked = validateBooking(body, now);
-    if (!checked.ok) {
-      return sendJson(res, 400, {
-        error: 'Please fix the highlighted fields.',
-        fields: checked.errors,
-      });
+    const booking = store.findBySessionId(String(body.session || ''));
+    if (booking && booking.status === 'pending' && booking.paymentStatus !== 'paid') {
+      store.cancel(booking.id);
+      return sendJson(res, 200, { released: true });
     }
-    const result = store.create(checked.value);
-    if (!result.ok) {
-      return sendJson(res, 409, {
-        error: 'Sorry — that time was just booked by someone else. Please pick another slot.',
-      });
-    }
-    return sendJson(res, 201, { booking: publicBooking(result.booking) });
+    return sendJson(res, 200, { released: false });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/webhooks/stripe') {
+    return stripeWebhook(store, req, res, now);
   }
 
   if (req.method === 'POST' && pathname === '/api/bookings/lookup') {
@@ -234,7 +305,13 @@ async function handleApi(store, req, res, url) {
       });
     }
     store.cancel(booking.id);
-    return sendJson(res, 200, { cancelled: publicBooking(booking) });
+    return sendJson(res, 200, {
+      cancelled: publicBooking(booking),
+      refundNote:
+        booking.paymentStatus === 'paid'
+          ? 'Your session is cancelled. Refunds are handled by the coach — we’ll be in touch.'
+          : null,
+    });
   }
 
   // ---- Coach-only routes ----------------------------------------------------
@@ -250,8 +327,16 @@ async function handleApi(store, req, res, url) {
       if (!schedule.isValidDate(from) || !schedule.isValidDate(to)) {
         return sendJson(res, 400, { error: 'from and to must be YYYY-MM-DD dates.' });
       }
-      const bookings = store.listBetween(from, to).map(adminBooking);
+      const bookings = store.listBetween(from, to, now).map(adminBooking);
       return sendJson(res, 200, { from, to, bookings });
+    }
+
+    // Zelle can't be verified automatically, so the coach confirms it here.
+    const paidMatch = /^\/api\/admin\/bookings\/(\d+)\/mark-paid$/.exec(pathname);
+    if (req.method === 'POST' && paidMatch) {
+      const booking = store.markPaid(Number(paidMatch[1]), now);
+      if (!booking) return sendJson(res, 404, { error: 'No booking with that id.' });
+      return sendJson(res, 200, { booking: adminBooking(booking) });
     }
 
     const cancelMatch = /^\/api\/admin\/bookings\/(\d+)$/.exec(pathname);
@@ -263,6 +348,107 @@ async function handleApi(store, req, res, url) {
   }
 
   return sendJson(res, 404, { error: 'Unknown endpoint.' });
+}
+
+async function createBooking(store, req, res, now) {
+  const body = await readJsonBody(req);
+  const checked = validateBooking(body, now);
+  if (!checked.ok) {
+    return sendJson(res, 400, {
+      error: 'Please fix the highlighted fields.',
+      fields: checked.errors,
+    });
+  }
+
+  const request = checked.value;
+  const amountCents = config.paymentsEnabled()
+    ? config.priceFor(request.durationMinutes, request.trainingType)
+    : 0;
+  const owesMoney = request.paymentMethod !== 'none' && amountCents > 0;
+  const holdMinutes =
+    request.paymentMethod === 'card'
+      ? config.PAYMENTS.holdMinutes.card
+      : config.PAYMENTS.holdMinutes.zelle;
+
+  const result = store.create(
+    {
+      ...request,
+      amountCents,
+      status: owesMoney ? 'pending' : 'confirmed',
+      paymentStatus: 'unpaid',
+      holdExpiresAt: owesMoney
+        ? new Date(now.getTime() + holdMinutes * 60_000).toISOString()
+        : null,
+    },
+    now
+  );
+
+  if (!result.ok) {
+    return sendJson(res, 409, {
+      error: 'Sorry — that time was just booked by someone else. Please pick another slot.',
+    });
+  }
+
+  let booking = result.booking;
+  const trainingLabel =
+    config.TRAINING_TYPES.find((t) => t.id === booking.trainingType)?.label || booking.trainingType;
+
+  if (request.paymentMethod === 'card') {
+    try {
+      const session = await payments.createCheckoutSession(booking, { trainingLabel });
+      booking = store.attachCheckoutSession(booking.id, session.id);
+      return sendJson(res, 201, {
+        booking: publicBooking(booking),
+        checkoutUrl: session.url,
+      });
+    } catch (error) {
+      // Never leave a slot held for a checkout that failed to open.
+      store.cancel(booking.id);
+      console.error('could not open Stripe Checkout:', error.message);
+      return sendJson(res, 502, {
+        error: 'We could not open the card payment page. Please try again, or pay by Zelle.',
+      });
+    }
+  }
+
+  if (request.paymentMethod === 'zelle') {
+    return sendJson(res, 201, {
+      booking: publicBooking(booking),
+      zelle: payments.zelleInstructions(booking),
+    });
+  }
+
+  return sendJson(res, 201, { booking: publicBooking(booking) });
+}
+
+async function stripeWebhook(store, req, res, now) {
+  const raw = await readRawBody(req);
+  let event;
+  try {
+    event = payments.verifyWebhook(raw, req.headers['stripe-signature']);
+  } catch (error) {
+    console.error('rejected a Stripe webhook:', error.message);
+    return sendJson(res, 400, { error: 'Signature check failed.' });
+  }
+
+  const session = event.data?.object || {};
+  const bookingId = Number(session.metadata?.bookingId);
+  const booking =
+    (session.id && store.findBySessionId(session.id)) ||
+    (Number.isFinite(bookingId) ? store.getById(bookingId) : null);
+
+  if (booking) {
+    if (event.type === 'checkout.session.completed' && session.payment_status === 'paid') {
+      store.markPaid(booking.id, now);
+      console.log(`payment received for ${booking.confirmationCode}`);
+    } else if (event.type === 'checkout.session.expired' && booking.paymentStatus !== 'paid') {
+      store.cancel(booking.id);
+      console.log(`checkout expired, released ${booking.confirmationCode}`);
+    }
+  }
+
+  // Always 200 once the signature checks out, so Stripe stops retrying.
+  return sendJson(res, 200, { received: true });
 }
 
 async function serveStatic(res, pathname) {
@@ -298,15 +484,39 @@ function start() {
   const store = new BookingStore(process.env.DB_FILE);
   const server = http.createServer(createApp(store));
 
+  // Sweep lapsed holds on a timer too, so slots reopen even on a quiet site.
+  const sweep = setInterval(() => {
+    try {
+      const released = store.releaseExpiredHolds();
+      if (released > 0) console.log(`released ${released} expired hold(s)`);
+    } catch (error) {
+      console.error('hold sweep failed:', error.message);
+    }
+  }, 5 * 60_000);
+  sweep.unref();
+
   server.listen(PORT, HOST, () => {
     console.log(`Diamond Time booking site running at http://localhost:${PORT}`);
     console.log(`Coach dashboard: http://localhost:${PORT}/admin`);
     if (ADMIN_TOKEN === 'coach') {
       console.warn('WARNING: using the default admin token. Set ADMIN_TOKEN before going live.');
     }
+    const methods = [
+      config.cardEnabled() ? 'card (Stripe)' : null,
+      config.zelleEnabled() ? 'Zelle' : null,
+    ].filter(Boolean);
+    console.log(
+      methods.length
+        ? `Payments: ${methods.join(' and ')}`
+        : 'Payments: none configured — sessions book as pay-at-the-facility.'
+    );
+    if (config.cardEnabled() && !config.PAYMENTS.stripe.webhookSecret) {
+      console.warn('WARNING: STRIPE_WEBHOOK_SECRET is not set. Payments still confirm on return from Stripe, but set it before going live.');
+    }
   });
 
   const shutdown = () => {
+    clearInterval(sweep);
     server.close(() => {
       store.close();
       process.exit(0);

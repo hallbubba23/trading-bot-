@@ -1,6 +1,13 @@
 'use strict';
 
-const { TRAINING_TYPES, DURATIONS, BOOKING_WINDOW_DAYS } = require('./config');
+const {
+  TRAINING_TYPES,
+  DURATIONS,
+  BOOKING_WINDOW_DAYS,
+  cardEnabled,
+  zelleEnabled,
+  paymentsEnabled,
+} = require('./config');
 const schedule = require('./schedule');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
@@ -87,6 +94,16 @@ function validateBooking(body, now = new Date()) {
   const notes = asString(input.notes);
   if (notes.length > 500) errors.notes = 'Notes are limited to 500 characters.';
 
+  // With no processor configured everyone pays at the facility.
+  const paymentMethod = paymentsEnabled() ? asString(input.paymentMethod) : 'none';
+  if (paymentsEnabled()) {
+    const allowed = [cardEnabled() && 'card', zelleEnabled() && 'zelle'].filter(Boolean);
+    if (!paymentMethod) errors.paymentMethod = 'Choose how you want to pay.';
+    else if (!allowed.includes(paymentMethod)) {
+      errors.paymentMethod = 'That payment method isn’t available.';
+    }
+  }
+
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
@@ -100,6 +117,7 @@ function validateBooking(body, now = new Date()) {
       durationMinutes,
       trainingType,
       notes,
+      paymentMethod,
     },
   };
 }

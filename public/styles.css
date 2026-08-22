@@ -772,6 +772,80 @@ h3 {
   color: #8ba4c2;
 }
 
+/* ---------- Payment ---------- */
+
+.choice .price {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--grass);
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.8rem;
+}
+
+.summary-total {
+  border-bottom: none !important;
+  padding-top: 0.15rem;
+}
+
+.summary-total dt {
+  color: var(--ink) !important;
+  font-weight: 700;
+}
+
+.summary-total dd {
+  font-size: 1.25rem;
+  color: var(--grass);
+  font-variant-numeric: tabular-nums;
+}
+
+.zelle-box {
+  text-align: left;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.9rem;
+}
+
+.zelle-box h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.zelle-amount {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.zelle-amount strong {
+  color: var(--navy);
+}
+
+.zelle-box ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.89rem;
+  color: var(--ink);
+  display: grid;
+  gap: 0.3rem;
+}
+
+.zelle-warning {
+  margin: 0.75rem 0 0;
+  font-size: 0.84rem;
+  color: var(--stitch-dark);
+}
+
 /* ---------- Coach dashboard ---------- */
 
 .admin-main {
@@ -912,6 +986,66 @@ h3 {
 .button.small {
   padding: 0.32rem 0.75rem;
   font-size: 0.82rem;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  white-space: nowrap;
+}
+
+.button.confirm-paid {
+  border-color: var(--grass);
+  color: var(--grass);
+}
+
+.button.confirm-paid:hover:not(:disabled) {
+  background: var(--grass-soft);
+}
+
+.payment-cell {
+  display: grid;
+  gap: 0.2rem;
+  justify-items: start;
+}
+
+.payment-cell .amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pill.paid {
+  background: var(--grass-soft);
+  color: #12603a;
+}
+
+.pill.due {
+  background: #fdf1ef;
+  color: var(--stitch-dark);
+}
+
+.hold-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.unpaid-row td {
+  background: #fffaf8;
+}
+
+.stat-value.owed {
+  color: var(--stitch-dark);
 }
 
 /* ---------- Responsive ---------- */

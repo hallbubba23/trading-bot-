@@ -71,26 +71,34 @@ function storeToken(value) {
 
 /* ---------- rendering ---------- */
 
+function money(cents) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+    cents / 100
+  );
+}
+
 function renderStats(visible) {
   const totalMinutes = visible.reduce((sum, b) => sum + b.durationMinutes, 0);
-  const byType = {};
-  for (const booking of visible) {
-    byType[booking.trainingLabel] = (byType[booking.trainingLabel] || 0) + 1;
-  }
-  const breakdown =
-    Object.entries(byType)
-      .map(([label, count]) => `${count} ${label.toLowerCase()}`)
-      .join(' · ') || 'nothing booked yet';
+  const collected = visible
+    .filter((b) => b.paymentStatus === 'paid')
+    .reduce((sum, b) => sum + b.amountCents, 0);
+  const awaiting = visible.filter((b) => b.paymentStatus !== 'paid' && b.amountCents > 0);
+  const outstanding = awaiting.reduce((sum, b) => sum + b.amountCents, 0);
 
   $('#stats').innerHTML = `
     <div class="stat card"><span class="stat-value"></span><span class="stat-label">Sessions</span></div>
     <div class="stat card"><span class="stat-value"></span><span class="stat-label">Coaching hours</span></div>
-    <div class="stat card wide"><span class="stat-value small"></span><span class="stat-label">Breakdown</span></div>
+    <div class="stat card"><span class="stat-value"></span><span class="stat-label">Collected</span></div>
+    <div class="stat card"><span class="stat-value"></span><span class="stat-label">Awaiting payment</span></div>
   `;
   const values = document.querySelectorAll('#stats .stat-value');
   values[0].textContent = String(visible.length);
   values[1].textContent = (totalMinutes / 60).toFixed(1);
-  values[2].textContent = breakdown;
+  values[2].textContent = money(collected);
+  values[3].textContent = awaiting.length
+    ? `${money(outstanding)}`
+    : '—';
+  if (awaiting.length) values[3].classList.add('owed');
 }
 
 function renderSchedule(visible) {
@@ -126,7 +134,7 @@ function renderSchedule(visible) {
       <thead>
         <tr>
           <th>Time</th><th>Player</th><th>Training</th>
-          <th>Contact</th><th>Notes</th><th>Code</th><th></th>
+          <th>Contact</th><th>Payment</th><th>Notes</th><th>Code</th><th></th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -135,11 +143,13 @@ function renderSchedule(visible) {
 
     for (const booking of dayBookings) {
       const row = document.createElement('tr');
+      if (booking.status === 'pending') row.className = 'unpaid-row';
 
       const cells = [
         `${booking.startLabel} – ${booking.endLabel}`,
         booking.name,
         `${booking.trainingLabel} (${booking.durationMinutes} min)`,
+        '',
         '',
         booking.notes || '—',
         booking.confirmationCode,
@@ -160,7 +170,18 @@ function renderSchedule(visible) {
       tel.textContent = booking.phone;
       contact.append(mail, document.createElement('br'), tel);
 
+      row.children[4].appendChild(paymentCell(booking));
+
       const actions = document.createElement('td');
+      actions.className = 'row-actions';
+      if (booking.paymentStatus !== 'paid' && booking.amountCents > 0) {
+        const paid = document.createElement('button');
+        paid.type = 'button';
+        paid.className = 'button small confirm-paid';
+        paid.textContent = 'Mark paid';
+        paid.addEventListener('click', () => markPaid(booking));
+        actions.appendChild(paid);
+      }
       const cancel = document.createElement('button');
       cancel.type = 'button';
       cancel.className = 'button danger small';
@@ -175,6 +196,44 @@ function renderSchedule(visible) {
     card.appendChild(table);
     container.appendChild(card);
   }
+}
+
+const METHOD_LABELS = { card: 'Card', zelle: 'Zelle', none: 'At the facility' };
+
+/** Amount plus a pill saying where that money stands. */
+function paymentCell(booking) {
+  const wrap = document.createElement('div');
+  wrap.className = 'payment-cell';
+
+  if (!booking.amountCents) {
+    wrap.textContent = 'No charge';
+    return wrap;
+  }
+
+  const amount = document.createElement('span');
+  amount.className = 'amount';
+  amount.textContent = booking.amountLabel;
+
+  const pill = document.createElement('span');
+  const paid = booking.paymentStatus === 'paid';
+  pill.className = `pill ${paid ? 'paid' : 'due'}`;
+  pill.textContent = paid
+    ? `Paid · ${METHOD_LABELS[booking.paymentMethod] || booking.paymentMethod}`
+    : `Due · ${METHOD_LABELS[booking.paymentMethod] || booking.paymentMethod}`;
+
+  wrap.append(amount, pill);
+
+  if (!paid && booking.holdExpiresAt) {
+    const hold = document.createElement('span');
+    hold.className = 'hold-note';
+    hold.textContent = `Holds until ${new Date(booking.holdExpiresAt).toLocaleString('en-US', {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    })}`;
+    wrap.appendChild(hold);
+  }
+  return wrap;
 }
 
 function applyFilter() {
@@ -197,6 +256,22 @@ async function load() {
     if (error.status === 401) return signOut('That token was not accepted.');
     $('#schedule').innerHTML = '<div class="card"><p class="error"></p></div>';
     $('#schedule .error').textContent = error.message;
+  }
+}
+
+async function markPaid(booking) {
+  const method = METHOD_LABELS[booking.paymentMethod] || booking.paymentMethod;
+  if (!window.confirm(`Confirm you received ${booking.amountLabel} from ${booking.name} by ${method}?`)) {
+    return;
+  }
+  try {
+    const { booking: updated } = await api(`/api/admin/bookings/${booking.id}/mark-paid`, {
+      method: 'POST',
+    });
+    bookings = bookings.map((b) => (b.id === updated.id ? updated : b));
+    applyFilter();
+  } catch (error) {
+    window.alert(error.message);
   }
 }
 

@@ -127,6 +127,12 @@
                 </div>
               </div>
 
+              <div id="payment-section" hidden>
+                <h3 class="sub-heading">How would you like to pay?</h3>
+                <div class="payment-grid" id="payment-methods" role="radiogroup" aria-label="Payment method"></div>
+                <p class="error" data-error-for="paymentMethod"></p>
+              </div>
+
               <p class="error form-error" id="form-error" role="alert"></p>
 
               <button class="button primary large" id="submit-button" type="submit" disabled>
@@ -145,6 +151,9 @@
               <div><dt>Length</dt><dd id="sum-duration">—</dd></div>
               <div><dt>Date</dt><dd id="sum-date">—</dd></div>
               <div><dt>Time</dt><dd id="sum-time">—</dd></div>
+              <div class="summary-total" id="sum-total-row" hidden>
+                <dt>Total</dt><dd id="sum-total">—</dd>
+              </div>
             </dl>
             <p class="hint" id="summary-hint">Pick a session type to get started.</p>
           </div>
@@ -195,7 +204,17 @@
         <p class="confirm-code">
           Confirmation code<strong id="confirm-code"></strong>
         </p>
-        <p class="hint">
+
+        <div class="zelle-box" id="zelle-box" hidden>
+          <h3>Send your payment</h3>
+          <p class="zelle-amount">
+            <span id="zelle-amount"></span> to <strong id="zelle-handle"></strong>
+          </p>
+          <ol id="zelle-steps"></ol>
+          <p class="zelle-warning" id="zelle-hold"></p>
+        </div>
+
+        <p class="hint" id="confirm-hint">
           Save this code — you'll need it (plus your email) to look up or cancel the session.
         </p>
         <button class="button primary" type="button" id="confirm-close">Done</button>
